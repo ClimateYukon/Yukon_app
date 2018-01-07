@@ -1,6 +1,19 @@
+"""Quick and dirty, really dirty way to extract values for Whitehorse communities
+A lot of nested dictionnary comprehension in order to reach the structure needed for the app
+which is Places > Variable > Scenario > Model > Dataframe"""
+
 def get_mon_year( x ):
 	month, year = os.path.splitext( os.path.basename( x ) )[0].split( '_' )[-2:]
 	return {'month':month, 'year':year, 'fn':x}
+
+def doit(df):
+	dates = df.index
+	arr = df.values
+	t = [[ar[i]for ar in arr]for i in range(len(arr[0]))]
+	df = pd.DataFrame(t).transpose()
+	df.columns = places
+	df.index = dates
+	return df
 
 def core( path , feature ):
 	print('Computing {}'.format(path))
@@ -40,6 +53,24 @@ if __name__ == '__main__':
 	import pandas as pd
 	import geopandas as gpd
 
+	places =['Carcross',
+			'Whitehorse',
+			'Haines Junction',
+			'Destruction Bay',
+			'Burwash Landing',
+			'Beaver Creek',
+			'Dawson City',
+			'Mayo',
+			'Keno City',
+			'Stewart Crossing',
+			'Pelly Crossing',
+			'Carmacks',
+			'Old Crow',
+			'Watson Lake',
+			'Faro',
+			'Ross River',
+			'Teslin']	
+		
 	shp = '/home/UA/jschroder/Yukon_app/data/extraction.shp'
 	variables = ('pr','tas')
 	models = ['GISS-E2-R', 'GFDL-CM3' , 'IPSL-CM5A-LR' , 'MRI-CGCM3' , 'NCAR-CCSM4' ]
@@ -58,4 +89,34 @@ if __name__ == '__main__':
 		}
 
 
-	pickle.dump( result, open( "/workspace/Shared/Users/jschroder/TMP/Climate_app2.p", "wb" ) )
+	new = {
+		var : {
+			scen : {
+				mod :  doit(data[var][scen]['downscaled'][mod])
+				for mod in models
+			}
+			for scen in scenarios
+		}
+		for var in variables	
+	}
+
+	new2 = {
+		pla : {
+			var : {
+				scen : {
+					mod : new[var][scen][mod][pla]
+					for mod in models				
+				}
+				for scen in scenarios
+			}
+			for var in variables
+		}
+		for pla in places
+	} 
+	pickle.dump( new2, open( "/workspace/Shared/Users/jschroder/TMP/Climate_app2.p", "wb" ) )
+
+	
+
+
+
+
